@@ -1,0 +1,1 @@
+board_name:123,board_vendor:456,board_serial:789,cpu_serial:222,cpu_uuid:333

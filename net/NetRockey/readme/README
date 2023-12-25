@@ -1,0 +1,25 @@
+Copyright (C) 2005-2011 Feitian Technologies Co.,Ltd.
+http://www.FTsafe.com
+                                                                                
+NetRockeyARM for Linux x86 
+-------------------------------
+                                                                                
+                                                                                
+Requirements
+============
+                                                                                
+OS:     kernel 2.6.x
+                                                                                
+                                                                                
+====================================================================                                                                               
+
+1. Modify the configuration information in the CliCfg.ini
+                                                                               
+2. Run test application.
+                                                                                
+       # cd test
+       # make
+       # ./test
+                                                                                
+
+================================================================================

@@ -1,0 +1,51 @@
+Copyright (C) 2005-2011 Feitian Technologies Co.,Ltd.
+http://www.FTsafe.com
+                                                                                
+NetRockeyARM SDK for Linux x86 
+-------------------------------
+                                                                                
+                                                                                
+Requirements
+============
+                                                                                
+OS:     kernel  2.6.x
+                                                                                
+                                                                                
+Installation
+============
+                                                                                
+1. Installation. As 'root' user run:
+                                                                                
+        # ./inst
+                                                                                
+2. Uninstallation.
+        # ./uninst
+                                                                                
+                                                                                
+Getting Started
+===============
+                                                                                
+After successful installation and configuration:
+                                                                                
+1. Insert card and Run  application.
+                                                                                
+       # service NetDongleService start
+       
+2. Stop running.
+
+		   # service NetDongleService stop
+		   
+3. View Log.
+
+			 # service NetDongleService view
+			 
+4. Restart application.
+
+			 # service NetDongleService restart
+                                                                                
+
+================================================================================
+	NOTICE
+
+1.Please try to completely switch to root user(example: 'su -').
+================================================================================
