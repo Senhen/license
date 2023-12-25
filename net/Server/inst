@@ -1,0 +1,63 @@
+#!/bin/bash
+#
+#Rockey-ARM install script
+#
+
+echo
+echo Installing NRockey-ARM SDK...
+echo
+
+#Check whether the current user is root
+if test $(id -ur) != 0; then
+	echo
+	echo "You should logon as root user!"
+	echo
+	exit 1
+fi
+
+gnuexe() {
+    if hash chkconfig 2>/dev/null; then
+        chkconfig --add NetDongleService
+    elif hash insserv 2>/dev/null; then
+    		insserv NetDongleService
+    elif hash update-rc.d 2>/dev/null; then
+        update-rc.d NetDongleService defaults 99 01
+    fi
+}
+
+get_confirm()
+{
+	echo "[yes or no]"
+	while true
+	do
+		read X
+		case "$X" in
+			y | yes | Y | Yes | YES ) return 1;;
+			n | no | N | No | NO ) 
+				echo "Cancelled"
+				return 0;;
+			*) echo "Please enter yes or no";;
+		esac
+	done
+}
+
+if [ -f /usr/bin/NetDongleService/NetDongleService ] || [ -f /etc/init.d/NetDongleService ]; then
+	echo "The file Driver that this program was about to install already exists. Overwrite?"
+	if get_confirm ; then
+	   exit 1
+	fi
+																													    
+fi
+
+OS=`file /bin/ls | cut -c14-15`
+mkdir -p /usr/bin/NetDongleService
+cp -f ./service/service$OS/NetDongleService /usr/bin/NetDongleService/
+cp -f ./NetDongleService	 /etc/init.d/
+cd /etc/init.d/
+chmod +x NetDongleService
+
+gnuexe
+
+echo Install finished!
+
+

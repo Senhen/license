@@ -1,0 +1,39 @@
+#!/bin/bash
+#
+#Rockey-ARM uninstall script
+#
+#Check whether the current user is root
+if test $(id -ur) != 0; then
+    echo
+    echo "You should logon as root user!"
+	echo
+    exit 1
+fi
+rm -f /usr/local/lib/*NetRockeyARM.so
+
+if [ ! -f /usr/local/include/NetRockeyARM.h ]; then
+	if [ ! -f /usr/local/lib/libNetRockeyARM.a ]; then
+		if [ ! -f /usr/local/lib/libNetRockeyARM.so.0.3 ]; then
+			echo
+			echo "The file that this program was about to uninstall !"
+			echo
+			exit 1
+		fi
+	fi
+fi
+
+echo
+echo Uninstalling Rockey-ARM SDK...
+echo
+ 
+#Delete Rockey-ARM libs
+
+rm -rf /usr/local/include/NetRockeyARM.h
+
+rm -f /usr/local/lib/*NetRockeyARM*
+
+
+/sbin/ldconfig 2>/dev/null 
+
+echo Uninstall finished!
+

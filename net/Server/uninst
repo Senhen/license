@@ -1,0 +1,52 @@
+#!/bin/bash
+#
+#Rockey-ARM uninstall script
+#
+
+echo
+echo Uninstalling NRockey-ARM SDK...
+echo
+
+###
+gnuexe() {
+    if hash chkconfig 2>/dev/null; then
+        chkconfig --del NetDongleService
+    elif hash insserv 2>/dev/null; then
+    		insserv -r NetDongleService
+    elif hash update-rc.d 2>/dev/null; then
+        update-rc.d -f NetDongleService remove
+    fi
+}
+
+#Check whether the current user is root
+if test $(id -ur) != 0; then
+    echo
+    echo "You should logon as root user!"
+	echo
+    exit 1
+fi
+
+if [ ! -f /usr/bin/NetDongleService/NetDongleService ]; then
+		if [ ! -f /etc/init.d/NetDongleService ]; then
+				echo
+				echo "The file that this program was about to uninstall !"
+				echo
+				exit 1
+		fi
+fi
+
+if [ -n "`pidof -o %PPID NetDongleService`" ]; then
+	pid=`pidof NetDongleService`
+	kill $pid
+fi
+	
+gnuexe
+
+rm -rf /usr/bin/NetDongleService
+rm -rf /etc/init.d/NetDongleService
+
+
+echo Uninstall finished!
+
+
+

@@ -1,0 +1,112 @@
+#!/bin/bash
+# chkconfig: 2345 99 01
+# description: NetDongleService Server Daemon
+# processname: NetDongleService
+
+#source function library
+if [ -f /etc/init.d/functions ]; then
+	. /etc/init.d/functions
+elif [ -f /etc/rc.d/init.d/functions ]; then
+	. /etc/rc.d/init.d/functions
+
+fi
+
+# Check that networking is up.
+#[ ${NETWORKING} = "no" ] && exit 0
+
+[ -x /usr/bin/NetDongleService/NetDongleService ] || exit 0
+
+### BEGIN INIT INFO
+#
+# Provides:	 NetDongleService
+# Required-Start:	$local_fs  $remote_fs
+# Required-Stop:	$local_fs  $remote_fs
+# Default-Start: 	2 3 4 5
+# Default-Stop: 	0 1 6
+# Short-Description:	NetDongleService Server Daemon
+# Description: 	FTsafe NetRockey-ARM Service Daemon .
+#
+### END INIT INFO
+
+## Fill in name of program here.
+PROG="NetDongleService"
+PROG_PATH="/usr/bin/NetDongleService" 
+PROG_ARGS="" 
+PID_PATH="/var/run/"
+RETVAL=0
+
+###
+start() {
+        # Start daemons.
+        echo -n $"Starting $prog: "
+        if [ -n "`pidof -o %PPID $PROG`" ]; then
+            echo -n $"$PROG: already running"
+            echo 
+            return 1
+        fi
+        if hash daemon 2>/dev/null; then
+        	daemon $PROG_PATH/$PROG
+        else
+        	$PROG_PATH/$PROG $PROG_ARGS 2>&1 >/var/log/$PROG &
+        fi
+        RETVAL=$?
+        echo
+        return $RETVAL
+}
+
+stop() {
+       # Stop daemons.
+        echo -n $"Shutting down $prog: "
+        if [ -z "`pidof -o %PPID $PROG`" ]; then
+           echo -n $"$PROG: already stopped"
+           echo
+           return 1
+        fi
+        if hash killproc 2>/dev/null; then
+        	killproc $PROG
+        else
+        	pid=`pidof $PROG`
+        	kill $pid
+        fi
+        RETVAL=$?
+        echo
+        return $RETVAL
+}
+
+
+## Check to see if we are running as root first.
+if [ "$(id -u)" != "0" ]; then
+    echo "This script must be run as root" 1>&2
+    exit 1
+fi
+
+case "$1" in
+    start)
+        start
+        exit 0
+    ;;
+    stop)
+        stop
+        exit 0
+    ;;
+    restart)
+        stop
+        sleep 1
+        start
+        exit 0
+    ;;
+    view)
+    		if [ -f $PROG_PATH/srvlog.txt ]; then
+            cat $PROG_PATH/srvlog.txt
+        fi
+        exit 0
+    ;;
+    status)
+        status $PROG
+        RETVAL=$?
+    ;;
+    **)
+        echo "Usage: $0 {start|stop|restart|view}" 1>&2
+        exit 1
+    ;;
+esac

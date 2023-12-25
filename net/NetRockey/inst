@@ -1,0 +1,64 @@
+#!/bin/bash
+#
+#Rockey-ARM install script
+#
+SOVER=so.0.3
+script_path=`dirname "$0"`
+echo
+echo Installing Rockey-ARM SDK...
+echo
+
+#Check whether the current user is root
+if test $(id -ur) != 0; then
+	echo
+	echo "You should logon as root user!"
+	echo
+	exit 1
+fi
+get_confirm()
+{
+	echo "[yes or no]"
+	while true
+	do
+		read X
+		case "$X" in
+			y | yes | Y | Yes | YES ) return 1;;
+			n | no | N | No | NO ) 
+				echo "Cancelled"
+				return 0;;
+			*) echo "Please enter yes or no";;
+		esac
+	done
+}
+
+if [ -f /usr/local/include/NetRockeyARM.h ] || [ -f /usr/local/lib/libNetRockeyARM.$SOVER ] || [ -f /usr/local/lib/libNetRockeyARM.a ]; then
+	echo "The file Driver that this program was about to install already exists. Overwrite?"
+	if get_confirm ; then
+	   exit 1
+	fi
+																													    
+fi
+
+
+#Create the /usr/local/lib dir and copy libs to this dir
+mkdir -p /usr/local/lib
+mkdir -p /usr/local/include
+
+#Check the Linux system for 32-bit or 64-bit
+LINUXSYS=`file /bin/ls | cut -c14-15`
+if [ $LINUXSYS = "32" ];then
+ARCH=i386
+fi
+if [ $LINUXSYS = "64" ];then
+ARCH=amd64
+fi
+
+cp -f $script_path/include/*.h 																/usr/local/include
+cp -f $script_path/api/api$LINUXSYS/libNetRockeyARM.$SOVER		/usr/local/lib/
+cp -f $script_path/api/api$LINUXSYS/libNetRockeyARM.a					/usr/local/lib/
+ln -sf /urs/local/lib/libNetRockeyARM.$SOVER									/usr/local/lib/libNetRockeyARM.so
+
+
+echo Install finished!
+
+
