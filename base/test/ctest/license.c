@@ -204,13 +204,6 @@ int checkLicense(){
     commandOutput("cat /sys/class/dmi/id/product_serial", product_serial);
     commandOutput("cat /sys/class/dmi/id/product_uuid", product_uuid);
 
-    // printf("Board Name: %s", board_name);
-    // printf("Board Serial: %s", board_serial);
-    // printf("Board Vendor: %s", board_vendor);
-    // printf("Product Name: %s", product_name);  
-    // printf("Product Version: %s", product_version);  
-    // printf("Product Serial: %s", product_serial);  
-    // printf("Product UUID: %s", product_uuid);  
 	char InOutBuf[INOUT_BUF_LENGTH];
 	snprintf(InOutBuf, INOUT_BUF_LENGTH, "board_name:%s,board_serial:%s,board_vendor:%s,product_name:%s,product_version:%s,product_serial:%s,product_uuid:%s", 
 	board_name, board_serial, board_vendor, product_name, product_version, product_serial, product_uuid);
