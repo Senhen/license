@@ -1,5 +1,6 @@
 // Sample06.cpp : Defines the entry point for the console application.
 //
+//#include <cstdio>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -12,19 +13,17 @@
 #define MAX_OUTPUT_LEN 128
 #define CHECK_LICENSE_SUCCESS 200
 
+// Remove trailing spaces from a string
 void rtrim(char * str) {
     if (str == NULL || *str == '\0') {
         return;
     }
-
     int len = strlen(str);
     char *end_ptr = str + len - 1;  // Point to the last character in the string
-
     // Move backwards until we hit a non-space character
     while (end_ptr >= str && (*end_ptr == ' ' || *end_ptr == '\n')) {
         --end_ptr;
     }
-
     // Mark the next character as the end of the string
     *(end_ptr + 1) = '\0';
 }
@@ -50,6 +49,7 @@ void commandOutput(char* cmd, char* output) {
     pclose(fp);
 }
 
+//检查license是否有效
 int checkLicense(){
 	DWORD dwRet = 0;
 	int nCount = 0;
@@ -245,12 +245,140 @@ int checkLicense(){
 	return retcode;
 }
 
+int rsaAuthentication(){
+	BYTE buffer[256];
+	BYTE tmpbuf[256];
+	DWORD dwRet = 0;
+	int nCount = 0;
+	int i = 0;
+	int nInDataLen = 0;
+	int nOutDataLen = 0;
+	int nIndex = -1;
+	int retcode = 0;
+
+	DONGLE_INFO *pDongleInfo = NULL;
+	DONGLE_HANDLE hDongle = NULL;
+
+	RSA_PUBLIC_KEY  rsaPub;
+	FILE *fp = NULL;
+	WORD wPriID = 0x0002;
+
+    // 枚举锁
+	dwRet = Dongle_Enum(NULL, &nCount);
+	printf("Enum %d Dongle ARM. \n", nCount);
+	pDongleInfo = (DONGLE_INFO *)malloc(nCount * sizeof(DONGLE_INFO));
+	dwRet = Dongle_Enum(pDongleInfo, &nCount);
+	for (i = 0; i < nCount; i++)
+	{ // 0xFF表示标准版, 0x00为时钟锁,0x01为带时钟的U盘锁,0x02为标准U盘锁
+		if (pDongleInfo[i].m_Type == 0 || pDongleInfo[i].m_Type == 1)
+		{
+			nIndex = i;
+		}
+	}
+	if (nIndex == -1)
+	{ // 没有找到时钟锁
+		printf("Can't Find Time Dongle ARM.\n");
+		Dongle_Close(hDongle);
+		 retcode = 100;
+		return retcode;
+	}
+	// 打开锁
+	dwRet = Dongle_Open(&hDongle, 0);
+	printf("Open Dongle ARM. Return : 0x%08X . \n", dwRet);
+
+	//生成随机数
+	for (i = 0 ; i < 128; i++)
+	{
+		buffer[i] = rand() % 256;
+	}
+	nInDataLen = (128-11);
+	nOutDataLen = 256;
+	memcpy(tmpbuf, buffer, nInDataLen);
+	for (i = 0; i < nInDataLen; i++) {
+    	printf("%02X ", tmpbuf[i]);
+	}
+
+	fp = fopen("public.Rsapub", "rb");
+	if (fp == NULL) {
+        printf("Error! Unable to open file.\n");
+        return -1;
+    }
+    size_t readSize = fread(&rsaPub, 1, sizeof(RSA_PUBLIC_KEY), fp);
+
+    // Check if the full data had been read
+    if (readSize != sizeof(RSA_PUBLIC_KEY)) {
+        printf("Error! Only %zu bytes were read out of %zu.\n", readSize, sizeof(RSA_PUBLIC_KEY));
+        return -1;
+    }
+    printf("Public key read successfully.\n");
+
+    // Continue processing public key...
+
+    fclose(fp);
+
+
+	//rsa加密随机数
+	dwRet = Dongle_RsaPub(hDongle, FLAG_ENCODE,&rsaPub,buffer,nInDataLen,buffer,&nOutDataLen);
+	printf("RSA public key encode. Return: 0x%08X\n", dwRet);
+	for (i = 0; i < nOutDataLen; i++) {
+    	printf("%02X ", buffer[i]);
+	}
+
+	//rsa私钥解密随机数
+	nInDataLen = 256;
+	nOutDataLen = (128-11);
+	dwRet = Dongle_RsaPri(hDongle,wPriID,FLAG_DECODE,buffer,nInDataLen,buffer,&nOutDataLen);
+	printf("RSA private key decode. Return: 0x%08X\n", dwRet);
+
+	//比较解密后的随机数
+	if (memcmp(tmpbuf, buffer, nOutDataLen) == 0)
+	{   
+		printf("the public encode and private decode result is right. \n");
+		retcode = 200;
+		return retcode;
+	}
+	else
+	{
+		printf("the public encode and private decode result is wrong. \n");
+		retcode = 500;
+		return retcode;
+	}
+
+	// 关闭加密锁
+	dwRet = Dongle_Close(hDongle);
+	printf("Close Dongle ARM. Return: 0x%08X\n", dwRet);
+
+	if (pDongleInfo != NULL)
+	{
+		free(pDongleInfo);
+		pDongleInfo = NULL;
+	}
+
+}
+
 int main(int argc, char *argv[])
 {   
-    int retcode=checkLicense(); //retcode返回值：200表示license有效，100表示无法打开加密锁；300表示硬件指纹校验失败；400表示license过期
-    printf("retcode:%d\n", retcode);
-    if (retcode!=CHECK_LICENSE_SUCCESS){
+	//校验license硬件指纹和有效期
+	int retcodes=checkLicense(); //retcodes返回值：200表示license有效，100表示无法打开加密锁；300表示硬件指纹校验失败；400表示license过期
+    printf("retcodes:%d\n", retcodes);
+    if (retcodes!=CHECK_LICENSE_SUCCESS){
         printf("License is valid!\n");
+		//验证license失败，退出
+		return 0;
     } 
-    return 0;
+
+	int retcode =0;
+	//动态验证加密锁是否存在，每分钟执行一次
+	while(1){
+		retcode =rsaAuthentication(); //retcode返回值：200表示加密锁存在，500表示加密锁不存在
+		printf("retcode:%d\n", retcode);
+		if (retcode!=CHECK_LICENSE_SUCCESS){
+			printf("rsaAuthentication is valid!\n");
+			break;
+		}
+		sleep(60);
+	}
+	return retcode;
+
+    
 }
