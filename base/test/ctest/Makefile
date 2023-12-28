@@ -1,5 +1,5 @@
 	CC              =gcc
 all:
-	$(CC) test.c -o test -I ../include -lRockeyARM -lpthread
+	$(CC) license.c -o test -I ../../include -L ../../api/api64 -lRockeyARM -lpthread
 clean:
 	rm -f test *.bin
