@@ -323,13 +323,17 @@ int rsaAuthentication(){
 	for (i = 0; i < nOutDataLen; i++) {
     	printf("%02X ", buffer[i]);
 	}
+	printf("\n");
 
 	//rsa私钥解密随机数
 	nInDataLen = 256;
 	nOutDataLen = (128-11);
 	dwRet = Dongle_RsaPri(hDongle,wPriID,FLAG_DECODE,buffer,nInDataLen,buffer,&nOutDataLen);
 	printf("RSA private key decode. Return: 0x%08X\n", dwRet);
-
+	for (i = 0; i < nOutDataLen; i++) {
+		printf("%02X ", buffer[i]);
+	}
+	printf("\n");
 	//比较解密后的随机数
 	if (memcmp(tmpbuf, buffer, nOutDataLen) == 0)
 	{   
