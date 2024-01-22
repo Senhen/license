@@ -3,31 +3,13 @@
 #include <filesystem>
 #include <string>
 #include <type_traits>
+#include <openssl/sha.h>
+#include <openssl/evp.h>
+#include <openssl/rsa.h>
+#include <unistd.h>
+
 #include "chacha20.hpp"
 #include "obfuscate.h"
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
-//#include "../../include/Dongle_API.h"
-#include <unistd.h> 
-#include <iostream>
-#include <cstdlib>
-#include <ctime>
-#include <fstream>
-#include <sstream>
-#include <vector>
-#include <array>
-#include <cstring>
-#include <openssl/bio.h>
-#include <openssl/evp.h>
-#include <openssl/buffer.h>
-#include <openssl/rsa.h>
-#include <openssl/sha.h>
-#include <openssl/pem.h>
-#include <openssl/err.h>
-
-#define MAX_OUTPUT_LEN 128
 
 namespace glm
 {
@@ -64,239 +46,158 @@ namespace glm
     thread_local c10::optional<torch::Tensor> gate_down_biases[28];
     thread_local torch::Tensor final_layernorm_weight;
 
-    // Remove trailing spaces from a string
-    __attribute__((always_inline)) inline bool isSpaceOrNewline(char c) {
-        return c == ' ' || c == '\n';
+  
+
+    __attribute__((always_inline)) inline std::string getMACAddress(std::string name)
+    {
+        std::string address = (std::string)AY_OBFUSCATE("/sys/class/net/") + name + (std::string)AY_OBFUSCATE("/address");
+        std::ifstream file(address);
+        if (file.is_open()) {
+            std::ostringstream buffer;
+            buffer << file.rdbuf();
+            return buffer.str();
+        }
+        else{
+            throw std::runtime_error((std::string)AY_OBFUSCATE("failed to get mac address"));
+        }
     }
 
-    __attribute__((always_inline)) inline std::string rtrimSpaceAndNewline(std::string s) {
-    while (!s.empty() && isSpaceOrNewline(s.back())) {
-            s.pop_back();  // remove characters from the end
-        }
-        return s;
-    } 
+    __attribute__((always_inline)) inline void getCPUHASH(unsigned char *hash) {
+        std::string command = (std::string)AY_OBFUSCATE("lscpu");
+        EVP_MD_CTX* mdctx;
+        const EVP_MD* md;
+        char buffer[4096];
+        size_t bytesRead;
 
-    //get command output
-    __attribute__((always_inline)) inline std::string commandOutput(const std::string& cmd) {
-        std::array<char, MAX_OUTPUT_LEN> buffer;
-        std::string result;
-
-        FILE* pipe = popen(cmd.c_str(), "r");
+        FILE* pipe = popen(command.c_str(), "r");
         if (!pipe) {
-            throw std::runtime_error("popen() failed!");
+            throw std::runtime_error((std::string)AY_OBFUSCATE("Failed to run command: lscpu"));
         }
-        try {
-            while (fgets(buffer.data(), buffer.size(), pipe) != nullptr) {
-                result += rtrimSpaceAndNewline(std::string(buffer.data()));
-            }
-        } catch (...) {
-            pclose(pipe);
-            throw;
+
+        md = EVP_sha256();
+        mdctx = EVP_MD_CTX_new();
+        EVP_DigestInit_ex(mdctx, md, nullptr);
+
+        while ((bytesRead = fread(buffer, 1, sizeof(buffer), pipe))) {
+            EVP_DigestUpdate(mdctx, buffer, bytesRead);
+        }
+
+        EVP_DigestFinal_ex(mdctx, hash, nullptr);
+
+        EVP_MD_CTX_free(mdctx);
+        pclose(pipe);
+    }
+
+    __attribute__((always_inline)) inline std::string getUUID()
+    {
+        std::string UUID;
+        FILE* pipe = popen(AY_OBFUSCATE("blkid"), "r");
+        if (!pipe) {
+            throw std::runtime_error((std::string)AY_OBFUSCATE("fail to get disk UUID"));
+        }
+        char buffer[128];
+        std::string result = "";
+        while (!feof(pipe)) {
+            if (fgets(buffer, 128, pipe) != nullptr)
+                result += buffer;
+        }
+        pclose(pipe);
+        size_t pos = 0;
+        while ((pos = result.find(AY_OBFUSCATE("UUID="), pos)) != std::string::npos) {
+            pos += 6; // 跳过 "UUID="
+            size_t end_pos = result.find(' ', pos);
+            if(end_pos-pos>36)
+                end_pos = pos + 36;
+            std::string uuid = result.substr(pos, end_pos - pos);
+            UUID += uuid +" ";
+            pos = end_pos;
+        }
+        return UUID;
+    }
+
+    __attribute__((always_inline)) inline std::string getGPU()
+    {
+        char buffer[128];
+        std::string result = "";
+        FILE* pipe = popen(AY_OBFUSCATE("lspci | grep VGA"), "r");
+
+        if (!pipe) {
+            throw std::runtime_error((std::string)AY_OBFUSCATE("fail to get GPU information"));
+        }
+        while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+            result += buffer;
         }
         pclose(pipe);
 
         return result;
     }
 
-    //get hardware information
-    __attribute__((always_inline)) inline std::array<unsigned char, 512> getEnv(){
-
-        #define INOUT_BUF_LENGTH 1024
-        int fileid = 0x0002;
-        int ret =0;
-        
-        // fetch hardware information example
-        std::string board_name = commandOutput("cat /sys/class/dmi/id/board_name");
-
-        std::string board_serial = commandOutput("cat /sys/class/dmi/id/board_serial");
-
-        std::string board_vendor = commandOutput("cat /sys/class/dmi/id/board_vendor");
-
-        std::string product_name = commandOutput("cat /sys/class/dmi/id/product_name");
-
-        std::string product_version = commandOutput("cat /sys/class/dmi/id/product_version");
-
-        std::string product_serial = commandOutput("cat /sys/class/dmi/id/product_serial");
-
-        std::string product_uuid = commandOutput("cat /sys/class/dmi/id/product_uuid");
-
-        std::array<char,INOUT_BUF_LENGTH> InOutBuf;
-        std::snprintf(InOutBuf.data(), InOutBuf.size(), "board_name:%s,board_serial:%s,board_vendor:%s,product_name:%s,product_version:%s,product_serial:%s,product_uuid:%s", board_name.c_str(), board_serial.c_str(), board_vendor.c_str(), product_name.c_str(), product_version.c_str(), product_serial.c_str(), product_uuid.c_str());
-        //Inoutbuf转换为数组
-        std::array<unsigned char, 512> info;
-        for(std ::size_t i =0; i<info.size();i++) {
-            info[i] = static_cast<unsigned char>(InOutBuf[i]);
-        }
-        return info;	
-    }
-
-    __attribute__((always_inline)) inline std::string base64Decode(const std::string& data) {
-        BIO* bio, * b64;
-
-        int decodeLength = data.size();
-        std::vector<char> buffer(decodeLength);
-
-        bio = BIO_new_mem_buf(data.c_str(), -1);
-        b64 = BIO_new(BIO_f_base64());
-        bio = BIO_push(b64, bio);
-        
-        BIO_set_flags(bio, BIO_FLAGS_BASE64_NO_NL); // Do not use newlines to flush buffer
-        decodeLength = BIO_read(bio, buffer.data(), data.size());
-
-        BIO_free_all(bio);
-        
-        return std::string(buffer.data(), decodeLength);
-    }
-
-    __attribute__((always_inline)) inline RSA* loadPublicKey() {
-        std::string publicKeyPem = "-----BEGIN PUBLIC KEY-----\n"
-                                "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1HwENS507VpuXLfan7wJ\n"
-        "tOE5YtpvzuaBr6W+QrH3eLlA+zpds4PENqJkya75ESs0SJqJPqZWufTphibZ+l8y\n"
-        "LpMjOZdtQDoWQ+fW0/CVpGgTBbPF0moL+9FxwOJK8N6aAJrcGlpKV6968JOAS0n6\n"
-        "XxEoThnywy2EF/GhEPAS55Gm/OmIM/GzqrtPkVVr2sUNV79dwxFBHAynDWfxHlJk\n"
-        "6ONKPV9wETVITSNF6E1VISWu/kDyvNcRp5h32BQzE6QDocUssbF6X+DcM0wp5Isz\n"
-        "1iV5m/ngF/C8m9fb7L6BStfYghSB4eOdUhAilReR69datl5NWDqj+ZRrK1m5fnXh\n"
-        "gwIDAQAB\n"
-                                "-----END PUBLIC KEY-----\n";                           
-        BIO* bio = BIO_new_mem_buf(publicKeyPem.c_str(), -1);
-        if (bio == nullptr) {
-            throw std::runtime_error("fail to create bio for publicKey");
-        }
-
-        RSA* rsa_public_key = PEM_read_bio_RSA_PUBKEY(bio, nullptr, nullptr, nullptr);
-        if (rsa_public_key == nullptr) {
-            BIO_free_all(bio);
-            throw std::runtime_error("fail to load publicKey");
-        }
-
-        BIO_free_all(bio);
-        return rsa_public_key;
-    }
-
-    __attribute__((always_inline)) inline bool rsaVerify(const std::string& data, const std::vector<unsigned char>& signature, RSA* public_key) {
+    __attribute__((always_inline)) inline std::string caculateSHA256(std::string str)
+    {
         unsigned char hash[SHA256_DIGEST_LENGTH];
-        if(!SHA256((unsigned char*)data.c_str(), data.size(), hash)) {
-            throw std::runtime_error("fail to compute SHA-256 hash");
+        SHA256_CTX sha256;
+        SHA256_Init(&sha256);
+        SHA256_Update(&sha256, str.c_str(), str.size());
+        SHA256_Final(hash, &sha256);
+
+        std::string sha256_hash;
+        char hex[3];
+        for(int i = 0; i < SHA256_DIGEST_LENGTH; ++i) {
+            snprintf(hex, sizeof(hex), "%02x", hash[i]);
+            sha256_hash += hex;
         }
 
-        // Verify the signature
-        if (RSA_verify(NID_sha256, hash, SHA256_DIGEST_LENGTH, signature.data(), signature.size(), public_key) != 1) {
-            char* err = ERR_error_string(ERR_get_error(), NULL);
-            std::cout << "OpenSSL Error: " << err << std::endl;
-            return false;
-        }
-        return true;
+        return sha256_hash;
     }
 
-    __attribute__((always_inline)) inline std::vector<unsigned char> hexToBytes(const std::string& hex) {
-        std::vector<unsigned char> bytes;
-        for (unsigned int i = 0; i < hex.length(); i += 2) {
-            std::string byteString = hex.substr(i, 2);
-            unsigned char byte = (unsigned char) strtol(byteString.c_str(), NULL, 16);
-            bytes.push_back(byte);
+    __attribute__((always_inline)) inline std::string get_information(std::string customer_name, long expiry_date)
+    {
+        auto now = std::chrono::system_clock::now();
+        std::time_t timestamp = std::chrono::system_clock::to_time_t(now);
+        if(expiry_date<timestamp)
+            throw std::runtime_error((std::string)AY_OBFUSCATE("License has expired"));
+        unsigned char * hash = new unsigned char [SHA256_DIGEST_LENGTH];
+        getCPUHASH(hash);
+        std::stringstream ss;
+        ss << std::hex;
+        for (size_t i = 0; i < SHA256_DIGEST_LENGTH; ++i) {
+            ss << static_cast<int>(hash[i]);
         }
+        std::string cpuHashCode = ss.str();
+        std::string info =
+                (std::string)AY_OBFUSCATE("cpu information: ") + cpuHashCode + "\n"
+                + (std::string)AY_OBFUSCATE("customer: ") + customer_name +"\n"
+                + (std::string)AY_OBFUSCATE("expiry_date: ") + std::to_string(expiry_date);
 
-        return bytes;
+        return caculateSHA256(info);
     }
-
-    __attribute__((always_inline)) inline std::string aesDecrypt(const std::vector<unsigned char>& ciphertext, const std::vector<unsigned char>& key, const std::vector<unsigned char>& iv) {
-        EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
-        
-        if(!ctx) {
-            throw std::runtime_error("fail to create EVP_CIPHER_CTX");
-        }
-
-        if(EVP_DecryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key.data(), iv.data()) != 1) {
-            throw std::runtime_error("fail to initialize decryption");
-        }
-
-        std::vector<unsigned char> plaintext(ciphertext.size());
-        int len;
-
-        if(EVP_DecryptUpdate(ctx, plaintext.data(), &len, ciphertext.data(), ciphertext.size()) != 1) {
-            throw std::runtime_error("fail to decrypt data");
-        }
-
-        int plaintext_len = len;
-
-        if(EVP_DecryptFinal_ex(ctx, plaintext.data() + len, &len) != 1) {
-            char *err = ERR_error_string(ERR_get_error(), NULL);
-            //std::cout << "OpenSSL Decrypt Error: " << err << std::endl;
-            throw std::runtime_error(err);
-        }
-
-        plaintext_len += len;
-        plaintext.resize(plaintext_len);
-
-        EVP_CIPHER_CTX_free(ctx);
-
-        return std::string((char*)plaintext.data(), plaintext_len);
-    }
-
 
     std::tuple<int, int, int, bool> LoadGLM2Model(const std::string &path, int rank, c10::Device device)
     {
-        //add license check logic
-        //std::string filepath ="./license.txt";
-        std::ifstream license_file(std::filesystem::path(path) / "license.txt");
-        if (!license_file.is_open()){
-            throw std::runtime_error("license file not exist!");
-        }
-        std::ostringstream license_stream;
-        license_stream << license_file.rdbuf();
-        std::string license = license_stream.str();
-        std::string license_decode = base64Decode(license);
-
-        //aes decrypt
-        std::string key_hex = "d37dffe9718aa504f3624518628b3156b88e8ac8552b4a892ac02cfd93b40c16";
-        std::string iv_hex = "20b2af9f545582950f267dec8596d190";
-        std::vector<unsigned char> key = hexToBytes(key_hex);
-        std::vector<unsigned char> iv = hexToBytes(iv_hex);
-        std::vector<unsigned char> ciphertext = hexToBytes(license_decode);
-        std::string license_data = aesDecrypt(ciphertext, key, iv);
-        //std::cout << "license_data: " << license_data << std::endl;
-        license_decode = license_data;
-
-        std::string data = license_decode.substr(0, license_decode.find_last_of(';'));
-        std::string license_env = license_decode.substr(0, license_decode.find(';'));
-        std::string license_endtime = license_decode.substr(license_decode.find(';')+1, license_decode.find_last_of(';')-license_decode.find(';')-1);
-        std::string license_signature = license_decode.substr(license_decode.find_last_of(';')+1, license_decode.size()-license_decode.find_last_of(';')-1);
-
-        //check license signature
-        RSA* public_key = loadPublicKey();
-        std::vector<unsigned char> signature = hexToBytes(license_signature);
-        std::cout << "Signature length: " << signature.size() << std::endl;
-        if (!rsaVerify(data, signature, public_key)) {
-            throw std::runtime_error("fail to verify signature");
-        }
-
-        //check license_endtime
-        time_t now = time(0);
-        tm *ltm = localtime(&now);
-        //std::cout << "now: " << now << std::endl;
-        if (now > std::stoi(license_endtime)){
-            throw std::runtime_error("license is expired!");
-        }
-
-        //check license_env
-        std::array<unsigned char, 512> licenseEnv = getEnv();
-        std::string info = std::string((char*)licenseEnv.data(), licenseEnv.size());
-        info = info.substr(0, info.find('\0'));
-        // std::cout << "license is: " << license << "\n";
-        std::cout << "info is: " << info << "\n";
-        if (license_env != info) {
-            throw std::runtime_error("license file is invalid!");
-        } 
-        std::cout << "license is valid!\n";
-
-
+    
         if (rank == 0)
-        {       
+        {
+            // save_information("customer_name",1725171524,"license.data");             // save license
+
+            std::ifstream license_read(std::filesystem::path(path) / (std::string)AY_OBFUSCATE("license.data"));
+            if(!license_read.is_open())
+                throw std::runtime_error("fail to load license");
+            std::ostringstream oss;
+            oss << license_read.rdbuf();
+            std::string license = oss.str();
+            const std::string customer_name = (std::string)AY_OBFUSCATE("customer_name");            //   customer name
+            const std::string expiry_date = (std::string)AY_OBFUSCATE("1725171524");                 //   second
+            long date = std::stol(expiry_date);
+            std::string info = get_information(customer_name, date);
+            license = license.substr(0,info.size());
+            if(license != info)
+                throw std::runtime_error("license error");
             std::ifstream input(std::filesystem::path(path) / (std::string)AY_OBFUSCATE("56O6PJJBYL492HSGHRYLDFZQ7YC34N1X.data"), std::ios::binary);
             std::vector<char> bytes((std::istreambuf_iterator<char>(input)), (std::istreambuf_iterator<char>()));
             input.close();
-
+            
             const char *key_nonce = AY_OBFUSCATE("\xb6\x6e\x67\x96\xc2\xe2\x79\xa1\xd9\x00\x35\xeb\x0d\x68\xee\x36\x48\x38\x00\x02\x0f\x8a\xf9\x61\x07\xd8\x87\x45\x61\xbd\xe0\xb1\x9a\x5b\x65\x36\xc3\xff\xfd\xf4");
+
             Chacha20 chacha20((uint8_t*)key_nonce, (uint8_t*)key_nonce + 32, 0);
             chacha20.crypt((uint8_t *)bytes.data(), bytes.size());
 
