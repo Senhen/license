@@ -142,10 +142,15 @@ int main(int argc, char* argv[])
     buf << license_env.rdbuf();
     std::string license_envstr = buf.str();
     license_envstr = license_envstr.substr(0, license_envstr.find_last_of('\\'));
-    std::cout << "license_envstr: " << license_envstr << std::endl;
+    std::cout << "license_tag: " << license_envstr << std::endl;
+    //从终端输入license_tag
+    std::cout << "please input license_tag: ";
+    std::string license_tag;
+    std::cin >> license_tag;
+    std::cout << "license_tag: " << license_tag << std::endl;
     //从终端输入天数，这里存储为license_days,默认为365天
     std::cout << "please input license_days: ";
-    int license_days = 365;
+    int license_days;
     std::cin >> license_days;
     std::string license_days_str = std::to_string(license_days);
     //获取当前时间+天数得到过期时间
@@ -159,7 +164,7 @@ int main(int argc, char* argv[])
     std::string end_time_str = ss.str();
     std::cout << "end_time_str: " << end_time_str << std::endl;
     //将license_env和end_time_str拼接，得到license_str
-    std::string license_str = license_envstr + ";" + end_time_str;
+    std::string license_str = license_tag + "|" +license_envstr + "|" + end_time_str;
     std::cout << "license_str: " << license_str << std::endl;
 
     //获取私钥,计算签名
@@ -169,7 +174,7 @@ int main(int argc, char* argv[])
     std::cout << "signature_str: " << signature_str << std::endl;
 
     //将license_str和signature_str拼接,";"分割，得到license，写入license.txt
-    std::string license = license_str + ";" + signature_str;
+    std::string license = license_str + "|" + signature_str;
     std::cout << "license: " << license << std::endl;
 
     //aes加密

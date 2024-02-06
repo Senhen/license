@@ -1,3 +1,4 @@
+#//include <cstdio>
 #include <cstdlib>
 #include <ctime>
 #include <stdio.h>
@@ -85,7 +86,11 @@ std::array<unsigned char, 512> getEnv(){
     //std::cout << "Product uuid: " << product_uuid << "\n";
 
     std::array<char,INOUT_BUF_LENGTH> InOutBuf;
-    std::snprintf(InOutBuf.data(), InOutBuf.size(), "board_name:%s,board_serial:%s,board_vendor:%s,product_name:%s,product_version:%s,product_serial:%s,product_uuid:%s", board_name.c_str(), board_serial.c_str(), board_vendor.c_str(), product_name.c_str(), product_version.c_str(), product_serial.c_str(), product_uuid.c_str());
+    
+    //std::snprintf(InOutBuf.data(), InOutBuf.size(), "board_name:%s,board_serial:%s,board_vendor:%s,product_name:%s,product_version:%s,product_serial:%s,product_uuid:%s", board_name.c_str(), board_serial.c_str(), board_vendor.c_str(), product_name.c_str(), product_version.c_str(), product_serial.c_str(), product_uuid.c_str());
+    //std::snprintf(InOutBuf.data(), InOutBuf.size(), "222");
+    std::snprintf(InOutBuf.data(), InOutBuf.size(), "board_name:%s,board_serial:%s,board_vendor:%s,product_name:OpenStack Nova,product_version:23.1.1,product_serial:fd276085-883e-4c6e-9c1b-357cc3314cd7,product_uuid:fd276085-883e-4c6e-9c1b-357cc3314cd7", board_name.c_str(), board_serial.c_str(),board_vendor.c_str());
+
     //Inoutbuf转换为数组
     std::array<unsigned char, 512> str;
     for(std ::size_t i =0; i<str.size();i++) {
@@ -221,18 +226,26 @@ int main(int argc, char *argv[]){
     std::vector<unsigned char> iv = hexToBytes(iv_hex);
     std::vector<unsigned char> ciphertext = hexToBytes(license_decode);
     std::string license_data = aesDecrypt(ciphertext, key, iv);
-    //std::cout << "license_data: " << license_data << std::endl;
+    std::cout << "license_data: " << license_data << std::endl;
     license_decode = license_data;
-
+    std::string data = license_decode.substr(0, license_decode.find_last_of('|'));
     //根据两个;分成三段;data;signature;data为license_env和license_endtime的组合
-    std::string data = license_decode.substr(0, license_decode.find_last_of(';'));
-    std::string license_env = license_decode.substr(0, license_decode.find(';'));
-    std::string license_endtime = license_decode.substr(license_decode.find(';')+1, license_decode.find_last_of(';')-license_decode.find(';')-1);
-    std::string license_signature = license_decode.substr(license_decode.find_last_of(';')+1, license_decode.size()-license_decode.find_last_of(';')-1);
-    // std::cout << "data: " << data << std::endl;
-    // std::cout << "license_env: " << license_env << std::endl;
-    // std::cout << "license_endtime: " << license_endtime << std::endl;
-    // std::cout << "license_signature: " << license_signature << std::endl;
+    std::istringstream ss(license_decode);
+    std::string license_tag, license_env, license_endtime, license_signature;
+    std::getline(ss, license_tag, '|');
+    std::getline(ss, license_env, '|');
+    std::getline(ss, license_endtime, '|');
+    std::getline(ss, license_signature, '|');
+     
+     //std::string license_tag = license_decode.substr(0, license_decode.find('.'));
+     //std::string license_env = license_decode.substr(0, license_decode.find('.'));
+     //std::string license_endtime = license_decode.substr(license_decode.find('.')+1, license_decode.find_last_of('.')-license_decode.find('.')-1);
+     //std::string license_signature = license_decode.substr(license_decode.find_last_of('.')+1, license_decode.size()-license_decode.find_last_of('.')-1);
+     std::cout << "data: " << data << std::endl;
+     std::cout << "license_tag: " << license_tag << std::endl;
+     std::cout << "license_env: " << license_env << std::endl;
+     std::cout << "license_endtime: " << license_endtime << std::endl;
+     std::cout << "license_signature: " << license_signature << std::endl;
 
     //判断license signature是否正确
     RSA* public_key = loadPublicKey();
@@ -250,16 +263,44 @@ int main(int argc, char *argv[]){
         throw std::runtime_error("license is expired!");
     }
 
+    //判断license_tag是否正确
+    std::string license_tag_str = "0yq8ksjp";
+    if (license_tag == license_tag_str) {
+        std::cout << "license_tag is valid!\n";
+    }
+    else {
+        throw std::runtime_error("license tag is invalid!");
+    }
+
     //判断license_env是否正确
+    if (license_env == "anymachine") {
+        std::cout << "license_env is valid!\n";
+    }
+    else {
     std::array<unsigned char, 512> licenseEnv = getEnv();
     std::string info = std::string((char*)licenseEnv.data(), licenseEnv.size());
     info = info.substr(0, info.find('\0'));
-    // std::cout << "license is: " << license << "\n";
-    std::cout << "info is: " << info << "\n";
-    if (license_env != info) {
+    std::cout << "license is: " << license << "\n";
+    //如果包含.，根据.分割，遍历.截取的字符串，如果license_env包含该字符串，则认为license_env正确
+    std::string delimiter = ";";
+    size_t pos = 0;
+    std::string token;
+    bool found = false;
+    while ((pos = license_env.find(delimiter)) != std::string::npos) {
+        token = license_env.substr(0, pos);
+        //std::cout << token << std::endl;
+        if (token == info) {
+            found = true;
+            break;
+        }
+        license_env.erase(0, pos + delimiter.length());
+    }
+    if (!found && license_env != info) {
         throw std::runtime_error("license file is invalid!");
-    } 
+    }
     std::cout << "license is valid!\n";
     return 0;
+    }
+    
 
 }

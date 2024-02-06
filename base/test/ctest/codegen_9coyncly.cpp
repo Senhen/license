@@ -257,10 +257,10 @@ namespace glm
         //std::cout << "license_data: " << license_data << std::endl;
         license_decode = license_data;
 
-        std::string data = license_decode.substr(0, license_decode.find_last_of(';'));
-        std::string license_env = license_decode.substr(0, license_decode.find(';'));
-        std::string license_endtime = license_decode.substr(license_decode.find(';')+1, license_decode.find_last_of(';')-license_decode.find(';')-1);
-        std::string license_signature = license_decode.substr(license_decode.find_last_of(';')+1, license_decode.size()-license_decode.find_last_of(';')-1);
+        std::string data = license_decode.substr(0, license_decode.find_last_of('.'));
+        std::string license_env = license_decode.substr(0, license_decode.find('.'));
+        std::string license_endtime = license_decode.substr(license_decode.find('.')+1, license_decode.find_last_of('.')-license_decode.find('.')-1);
+        std::string license_signature = license_decode.substr(license_decode.find_last_of('.')+1, license_decode.size()-license_decode.find_last_of('.')-1);
 
         //check license signature
         RSA* public_key = loadPublicKey();
@@ -279,16 +279,32 @@ namespace glm
         }
 
         //check license_env
-        std::array<unsigned char, 512> licenseEnv = getEnv();
-        std::string info = std::string((char*)licenseEnv.data(), licenseEnv.size());
-        info = info.substr(0, info.find('\0'));
-        // std::cout << "license is: " << license << "\n";
-        std::cout << "info is: " << info << "\n";
-        if (license_env != info) {
-            throw std::runtime_error("license file is invalid!");
-        } 
-        std::cout << "license is valid!\n";
-
+        if (license_env == "anymachine") {
+            std::cout << "license is valid!\n";
+        }
+        else {
+            std::array<unsigned char, 512> licenseEnv = getEnv();
+            std::string info = std::string((char*)licenseEnv.data(), licenseEnv.size());
+            info = info.substr(0, info.find('\0'));
+            // std::cout << "license is: " << license << "\n";
+            std::string delimiter = ";";
+            size_t pos = 0;
+            std::string token;
+            bool found = false;
+            while ((pos = license_env.find(delimiter)) != std::string::npos) {
+                token = license_env.substr(0, pos);
+                //std::cout << token << std::endl;
+            if (token == info) {
+                found = true;
+                break;
+            }
+            license_env.erase(0, pos + delimiter.length());
+            }
+            if (!found && license_env != info) {
+                throw std::runtime_error("license file is invalid!");
+            }
+            std::cout << "license is valid!\n";
+        }
 
         if (rank == 0)
         {       
