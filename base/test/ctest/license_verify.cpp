@@ -89,8 +89,8 @@ std::array<unsigned char, 512> getEnv(){
     
     //std::snprintf(InOutBuf.data(), InOutBuf.size(), "board_name:%s,board_serial:%s,board_vendor:%s,product_name:%s,product_version:%s,product_serial:%s,product_uuid:%s", board_name.c_str(), board_serial.c_str(), board_vendor.c_str(), product_name.c_str(), product_version.c_str(), product_serial.c_str(), product_uuid.c_str());
     //std::snprintf(InOutBuf.data(), InOutBuf.size(), "222");
-    std::snprintf(InOutBuf.data(), InOutBuf.size(), "board_name:%s,board_serial:%s,board_vendor:%s,product_name:OpenStack Nova,product_version:23.1.1,product_serial:fd276085-883e-4c6e-9c1b-357cc3314cd7,product_uuid:fd276085-883e-4c6e-9c1b-357cc3314cd7", board_name.c_str(), board_serial.c_str(),board_vendor.c_str());
-
+    //std::snprintf(InOutBuf.data(), InOutBuf.size(), "board_name:%s,board_serial:%s,board_vendor:%s,product_name:OpenStack Nova,product_version:23.1.1,product_serial:fd276085-883e-4c6e-9c1b-357cc3314cd7,product_uuid:fd276085-883e-4c6e-9c1b-357cc3314cd7", board_name.c_str(), board_serial.c_str(),board_vendor.c_str());
+    std::snprintf(InOutBuf.data(), InOutBuf.size(),"1");
     //Inoutbuf转换为数组
     std::array<unsigned char, 512> str;
     for(std ::size_t i =0; i<str.size();i++) {
@@ -264,7 +264,7 @@ int main(int argc, char *argv[]){
     }
 
     //判断license_tag是否正确
-    std::string license_tag_str = "0yq8ksjp";
+    std::string license_tag_str = "2";
     if (license_tag == license_tag_str) {
         std::cout << "license_tag is valid!\n";
     }
