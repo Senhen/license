@@ -35,7 +35,6 @@ func startServer() error {
 	}
 	return nil
 }
-
 func main() {
 	err := startServer()
 	if err != nil {
