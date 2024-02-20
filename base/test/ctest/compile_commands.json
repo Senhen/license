@@ -1,0 +1,17 @@
+[
+  {
+    "arguments": [
+      "/opt/homebrew/opt/llvm/bin/clang++",
+      "-std=c++17",
+      "-I",
+      "/opt/homebrew/Cellar/openssl@1.1/1.1.1w/include",
+      "-c",
+      "-o",
+      "license_sign.o",
+      "/Users/zxz/Downloads/license/base/test/ctest/license_sign.cpp"
+    ],
+    "directory": "/Users/zxz/Downloads/license/base/test/ctest",
+    "file": "/Users/zxz/Downloads/license/base/test/ctest/license_sign.cpp",
+    "output": "/Users/zxz/Downloads/license/base/test/ctest/license_sign.o"
+  }
+]
