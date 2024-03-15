@@ -1,0 +1,1 @@
+board_name:,board_serial:,board_vendor:,product_name:OpenStack Nova,product_version:23.1.1,product_serial:fd276085-883e-4c6e-9c1b-357cc3314cd7,product_uuid:fd276085-883e-4c6e-9c1b-357cc3314cd7\0

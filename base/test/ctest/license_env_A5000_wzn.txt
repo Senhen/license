@@ -1,0 +1,1 @@
+board_name:NULL,board_serial:MBM323S50037B10,board_vendor:SITONHOLY,product_name:NULL,product_version:00001,product_serial:821013841,product_uuid:9f5d05b4-6d6f-03e4-b211-d21de0be1a1b\0

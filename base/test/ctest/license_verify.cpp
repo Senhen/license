@@ -99,10 +99,7 @@ std::array<unsigned char, 512> getEnv() {
     // "222");
     std::snprintf(
         InOutBuf.data(), InOutBuf.size(),
-        "board_name:%s,board_serial:%s,board_vendor:%s,product_name:OpenStack "
-        "Nova,product_version:23.1.1,product_serial:fd276085-883e-4c6e-9c1b-"
-        "357cc3314cd7,product_uuid:fd276085-883e-4c6e-9c1b-357cc3314cd7",
-        board_name.c_str(), board_serial.c_str(), board_vendor.c_str());
+        "board_name:,board_serial:,board_vendor:,product_name:KVM,product_version:Standard PC (i440FX + PIIX, 1996),product_serial:,product_uuid:d73d5742-de99-4d09-bcd7-748932f829db\0");
 
     // Inoutbuf转换为数组
     std::array<unsigned char, 512> str;
@@ -288,7 +285,7 @@ int main(int argc, char *argv[]) {
     }
 
     // 判断license_tag是否正确
-    std::string license_tag_str = "0yq8ksjp";
+    std::string license_tag_str = "5j90svag";
     if (license_tag == license_tag_str) {
         std::cout << "license_tag is valid!\n";
     } else {
