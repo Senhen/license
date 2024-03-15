@@ -32,6 +32,11 @@ WORKDIR /usr/src/
 COPY --from=builder /workspace/license_sign .
 COPY --from=signTools-builder /usr/src/signTools ./signTools
 
+
+RUN ls /usr/src/signTools
+RUN chmod +x /usr/src/signTools/license_sign
+
+
 ENV TZ=Asia/Shanghai
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
