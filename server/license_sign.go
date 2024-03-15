@@ -84,6 +84,7 @@ func LicenseSign(c *gin.Context) {
 			RequestId: "",
 			Data:      nil,
 		})
+		return
 	}
 
 	fmt.Println(string(output))

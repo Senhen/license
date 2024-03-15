@@ -1,4 +1,4 @@
-#include <fstream>
+
 #include <iomanip>
 #include <iostream>
 #include <openssl/aes.h>
@@ -9,6 +9,7 @@
 #include <openssl/rsa.h>
 #include <openssl/sha.h>
 #include <sstream>
+#include <vector>
 
 std::string vectorToHexString(const std::vector<unsigned char> &data) {
   std::ostringstream oss;
