@@ -31,6 +31,7 @@ func LicenseSign(c *gin.Context) {
 	klog.Infof("Type of req.LicenseEnv: %v", reflect.TypeOf(req.LicenseEnv))
 	klog.Infof("Type of req.LicenseTag: %v", reflect.TypeOf(req.LicenseTag))
 	klog.Infof("Type of req.LicenseDeadline: %v", reflect.TypeOf(req.LicenseDeadline))
+
 	if req.LicenseEnv == "" {
 		klog.Errorf("licenseEnv is not valid: %v", req.LicenseEnv)
 		c.JSON(http.StatusBadRequest, Response{
@@ -83,6 +84,8 @@ func LicenseSign(c *gin.Context) {
 	sem.Release(1)
 	//打印命令
 	klog.Infof("Run command: %v", cmd.String())
+	//打印输出
+	klog.Infof("Output: %v", string(output))
 	if err != nil {
 		klog.Errorf("Failed to run program: %v", err)
 		c.JSON(http.StatusInternalServerError, Response{
