@@ -137,6 +137,13 @@ std::string base64Encode(const std::string &data) {
 }
 
 int main(int argc, char *argv[]) {
+
+  std::cout << "Program started with " << argc << " arguments.\n";
+
+  for (int i = 0; i < argc; ++i) {
+    std::cout << "Argument " << i << ": " << argv[i] << '\n';
+  }
+
   if (argc != 4) {
     std::cerr << "Usage: " << argv[0] << " <license_tag>" << std::endl;
     return 1;
