@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os/exec"
+	"reflect"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -26,6 +27,10 @@ func LicenseSign(c *gin.Context) {
 		})
 		return
 	}
+
+	klog.Infof("Type of req.LicenseEnv: %v", reflect.TypeOf(req.LicenseEnv))
+	klog.Infof("Type of req.LicenseTag: %v", reflect.TypeOf(req.LicenseTag))
+	klog.Infof("Type of req.LicenseDeadline: %v", reflect.TypeOf(req.LicenseDeadline))
 	if req.LicenseEnv == "" {
 		klog.Errorf("licenseEnv is not valid: %v", req.LicenseEnv)
 		c.JSON(http.StatusBadRequest, Response{
