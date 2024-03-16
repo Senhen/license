@@ -11,18 +11,22 @@
 #include <sstream>
 #include <vector>
 
-std::string vectorToHexString(const std::vector<unsigned char> &data) {
+std::string vectorToHexString(const std::vector<unsigned char> &data)
+{
   std::ostringstream oss;
-  for (char c : data) {
+  for (char c : data)
+  {
     oss << std::hex << std::setfill('0') << std::setw(2)
         << (static_cast<int>(c) & 0xFF);
   }
   return oss.str();
 }
 
-std::vector<unsigned char> hexToBytes(const std::string &hex) {
+std::vector<unsigned char> hexToBytes(const std::string &hex)
+{
   std::vector<unsigned char> bytes;
-  for (unsigned int i = 0; i < hex.length(); i += 2) {
+  for (unsigned int i = 0; i < hex.length(); i += 2)
+  {
     std::string byteString = hex.substr(i, 2);
     unsigned char byte = (unsigned char)strtol(byteString.c_str(), NULL, 16);
     bytes.push_back(byte);
@@ -30,7 +34,8 @@ std::vector<unsigned char> hexToBytes(const std::string &hex) {
   return bytes;
 }
 
-std::string caculateSHA256(std::string str) {
+std::string caculateSHA256(std::string str)
+{
   unsigned char hash[SHA256_DIGEST_LENGTH];
   SHA256_CTX sha256;
   SHA256_Init(&sha256);
@@ -39,7 +44,8 @@ std::string caculateSHA256(std::string str) {
 
   std::string sha256_hash;
   char hex[3];
-  for (int i = 0; i < SHA256_DIGEST_LENGTH; ++i) {
+  for (int i = 0; i < SHA256_DIGEST_LENGTH; ++i)
+  {
     snprintf(hex, sizeof(hex), "%02x", hash[i]);
     sha256_hash += hex;
   }
@@ -47,9 +53,11 @@ std::string caculateSHA256(std::string str) {
   return sha256_hash;
 }
 
-std::vector<unsigned char> rsaSign(const std::string &data, RSA *private_key) {
+std::vector<unsigned char> rsaSign(const std::string &data, RSA *private_key)
+{
   unsigned char hash[SHA256_DIGEST_LENGTH];
-  if (!SHA256((unsigned char *)data.c_str(), data.size(), hash)) {
+  if (!SHA256((unsigned char *)data.c_str(), data.size(), hash))
+  {
     throw std::runtime_error("fail to compute SHA-256 hash");
   }
 
@@ -57,7 +65,8 @@ std::vector<unsigned char> rsaSign(const std::string &data, RSA *private_key) {
   unsigned int signature_length;
 
   if (!RSA_sign(NID_sha256, hash, SHA256_DIGEST_LENGTH, signature.data(),
-                &signature_length, private_key)) {
+                &signature_length, private_key))
+  {
     throw std::runtime_error("fail to sign");
   }
   // std::cout << "Signature length: " << signature_length << std::endl;
@@ -67,13 +76,15 @@ std::vector<unsigned char> rsaSign(const std::string &data, RSA *private_key) {
   return signature;
 }
 
-RSA *loadPrivateKey() {
+RSA *loadPrivateKey()
+{
   FILE *file = fopen("privateKey.pem", "rb");
   if (file == nullptr)
     throw std::runtime_error("fail open privateKey");
   RSA *rsa_private_key =
       PEM_read_RSAPrivateKey(file, nullptr, nullptr, nullptr);
-  if (rsa_private_key == nullptr) {
+  if (rsa_private_key == nullptr)
+  {
     throw std::runtime_error("fail to load privateKey");
   }
   fclose(file);
@@ -82,15 +93,18 @@ RSA *loadPrivateKey() {
 
 std::vector<unsigned char> aesEncrypt(const std::string &data,
                                       const std::vector<unsigned char> &key,
-                                      const std::vector<unsigned char> &iv) {
+                                      const std::vector<unsigned char> &iv)
+{
   EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
 
-  if (!ctx) {
+  if (!ctx)
+  {
     throw std::runtime_error("fail to create EVP_CIPHER_CTX");
   }
 
   if (EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key.data(), iv.data()) !=
-      1) {
+      1)
+  {
     throw std::runtime_error("fail to initialize encryption");
   }
 
@@ -98,13 +112,15 @@ std::vector<unsigned char> aesEncrypt(const std::string &data,
   int len;
 
   if (EVP_EncryptUpdate(ctx, ciphertext.data(), &len,
-                        (unsigned char *)data.c_str(), data.size()) != 1) {
+                        (unsigned char *)data.c_str(), data.size()) != 1)
+  {
     throw std::runtime_error("fail to encrypt data");
   }
 
   int ciphertext_len = len;
 
-  if (EVP_EncryptFinal_ex(ctx, ciphertext.data() + len, &len) != 1) {
+  if (EVP_EncryptFinal_ex(ctx, ciphertext.data() + len, &len) != 1)
+  {
     throw std::runtime_error("fail to finalize encryption");
   }
 
@@ -116,7 +132,8 @@ std::vector<unsigned char> aesEncrypt(const std::string &data,
   return ciphertext;
 }
 
-std::string base64Encode(const std::string &data) {
+std::string base64Encode(const std::string &data)
+{
   BIO *bio, *b64;
   BUF_MEM *bufferPtr;
 
@@ -136,15 +153,11 @@ std::string base64Encode(const std::string &data) {
   return encodedData;
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
 
-  std::cout << "Program started with " << argc << " arguments.\n";
-
-  for (int i = 0; i < argc; ++i) {
-    std::cout << "Argument " << i << ": " << argv[i] << '\n';
-  }
-
-  if (argc != 4) {
+  if (argc != 4)
+  {
     std::cerr << "Usage: " << argv[0] << " <license_tag>" << std::endl;
     return 1;
   }

@@ -78,11 +78,12 @@ func LicenseSign(c *gin.Context) {
 	}
 
 	// Run external program
-
-	cmd := exec.Command("bash", "-c", "./signTools/license_sign "+req.LicenseEnv+" "+req.LicenseTag+" "+strconv.Itoa(req.LicenseDeadline))
+	env := req.LicenseEnv + `\0`
+	cmd := exec.Command("bash", "-c", fmt.Sprintf("./signTools/license_sign \"%s\" \"%s\" %d", env, req.LicenseTag, req.LicenseDeadline))
 	sem.Release(1)
 	//打印命令
-	klog.Infof("Running command with arguments: %v, %v, %v", req.LicenseEnv, req.LicenseTag, strconv.Itoa(req.LicenseDeadline))
+	klog.Infof("Running command with arguments: %v, %v, %v", env, req.LicenseTag, strconv.Itoa(req.LicenseDeadline))
+	klog.Infof("Running command: %v", cmd.String())
 	output, err := cmd.Output()
 	if err != nil {
 		klog.Errorf("Failed to run program: %v", err)
