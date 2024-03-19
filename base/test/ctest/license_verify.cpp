@@ -99,7 +99,7 @@ std::array<unsigned char, 512> getEnv() {
     // "222");
     std::snprintf(
         InOutBuf.data(), InOutBuf.size(),
-        "board_name:,board_serial:,board_vendor:,product_name:KVM,product_version:Standard PC (i440FX + PIIX, 1996),product_serial:,product_uuid:d73d5742-de99-4d09-bcd7-748932f829db\0");
+        "board_name:YZMB-00882-104,board_serial:MBMA18S24506D30,board_vendor:Inspur,product_name:NF5280M5,product_version:00001,product_serial:221936055,product_uuid:C55D05B4-C861-03E7-11EC-3CC2998D2267");
 
     // Inoutbuf转换为数组
     std::array<unsigned char, 512> str;
@@ -285,7 +285,7 @@ int main(int argc, char *argv[]) {
     }
 
     // 判断license_tag是否正确
-    std::string license_tag_str = "5j90svag";
+    std::string license_tag_str = "lghmhizl";
     if (license_tag == license_tag_str) {
         std::cout << "license_tag is valid!\n";
     } else {
@@ -300,6 +300,7 @@ int main(int argc, char *argv[]) {
         std::string info =
             std::string((char *)licenseEnv.data(), licenseEnv.size());
         info = info.substr(0, info.find('\0'));
+        std::cout << "info is: " << info << "\n";
         std::cout << "license is: " << license << "\n";
         // 如果包含.，根据.分割，遍历.截取的字符串，如果license_env包含该字符串，则认为license_env正确
         std::string delimiter = ";";
@@ -316,7 +317,9 @@ int main(int argc, char *argv[]) {
             license_env.erase(0, pos + delimiter.length());
         }
         if (!found && license_env != info) {
-            throw std::runtime_error("license file is invalid!");
+            std::cout << "license_env: " << license_env << std::endl;
+            std::cout << "info: " << info << std::endl;
+            throw std::runtime_error("license env is invalid!");
         }
         std::cout << "license is valid!\n";
         return 0;

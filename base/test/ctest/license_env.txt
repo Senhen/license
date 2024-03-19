@@ -1,1 +1,1 @@
-board_name:60WB32,board_serial:2400337360000267,board_vendor:LCWT,product_name:R8280,product_version:Whitley,product_serial:G7X008,product_uuid:8f574d8c-d769-11ed-9c9d-e8611f46722c\0
+board_name:YZMB-00882-104,board_serial:MBMA18S24506D30,board_vendor:Inspur,product_name:NF5280M5,product_version:00001,product_serial:221936055,product_uuid:C55D05B4-C861-03E7-11EC-3CC2998D2267\0
